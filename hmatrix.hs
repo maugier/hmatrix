@@ -1,28 +1,36 @@
+import Control.Applicative
 import Control.Concurrent (threadDelay)
 import Control.Monad
+import Control.Monad.Random
 import Control.Monad.State
 import Data.Array.IO
 import Data.Char
 import Data.IORef
+import Data.List (transpose)
 import Data.Text (pack)
 import UI.NCurses
 import System.Random
 
 -- config
 
-hira = ['ぁ'..'ゔ']
-kata = ['ァ'..'ヺ']
-
-message = map chr [84,72,69,71,65,77,69]
+message = "+*=-.;THEGAME"
 
 delay = 50000
 
-on = (2, 5)
+on = (2, 8)
 off = (10, 20)
 
 -- end config
 
-data Cell = CEmpty | CNormal | CBright deriving Show
+data Cell = Empty | Normal | Bright
+	deriving Show
+
+column :: MonadRandom m => m [Cell]
+column = do
+	e <- getRandomR off
+	n <- getRandomR on
+	return (replicate e Empty ++ [Bright] ++ replicate n Normal)
+
 
 slice n = map (take n) . takeWhile (not.null) . iterate (drop n)
 
@@ -36,14 +44,14 @@ createColors = sequence [ newColorID ColorBlack ColorBlack 1
 mutateArray f a = getBounds a >>= mapM_ (\i -> readArray a i >>= f >>= writeArray a i) . range
 
 updateCounter :: (Int, Cell) -> IO (Int, Cell)
-updateCounter (0, CEmpty) = return (0, CBright)
-updateCounter (0, CBright) = randomRIO on >>= \x -> return (x, CNormal)
-updateCounter (0, CNormal) = randomRIO off >>= \x -> return (x, CEmpty)
+updateCounter (0, Empty) = return (0, Bright)
+updateCounter (0, Bright) = randomRIO on >>= \x -> return (x, Normal)
+updateCounter (0, Normal) = randomRIO off >>= \x -> return (x, Empty)
 updateCounter (n, s) = return (n-1, s)
 
-setStyle [black,_] CEmpty  = setColor black >> setAttribute AttributeBold False
-setStyle [_,green] CNormal = setColor green >> setAttribute AttributeBold False
-setStyle [_,green] CBright = setColor green >> setAttribute AttributeBold True
+setStyle [black,_] Empty  = setColor black >> setAttribute AttributeBold False
+setStyle [_,green] Normal = setColor green >> setAttribute AttributeBold False
+setStyle [_,green] Bright = setColor green >> setAttribute AttributeBold True
 
 
 drawSingleChar colors y x ch s = moveCursor y x >> setStyle colors s >> drawText (pack [ch])	
@@ -56,7 +64,7 @@ roll m l = modifyIORef m ((l:) . init)
 redrawMatrix colors = (sequence_.) . deepzip (drawSingleChar colors)
 
 initcounters :: Integer -> IO (IOArray Integer (Int,Cell))
-initcounters width = newArray (0, width - 1) (0, CNormal)
+initcounters width = newArray (0, width - 1) (0, Normal)
 
 main = runCurses $ do
 	(y, x') <- screenSize
@@ -65,7 +73,7 @@ main = runCurses $ do
 	win    <- defaultWindow
 	counters <- liftIO $ initcounters x
 	let back = backdrop y x message
-	mask <- liftIO $ newIORef (backdrop y x [CEmpty])
+	mask <- liftIO $ newIORef (backdrop y x [Empty])
 	forever $ do
 		liftIO $ do 
 			mutateArray updateCounter counters
