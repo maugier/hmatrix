@@ -52,8 +52,9 @@ updateCounter (n, s) = return (n-1, s)
 setStyle [black,_] Empty  = setColor black >> setAttribute AttributeBold False
 setStyle [_,green] Normal = setColor green >> setAttribute AttributeBold False
 setStyle [_,green] Bright = setColor green >> setAttribute AttributeBold True
+setStyle _         _      = return ()
 
-
+drawSingleChar _      _ _ _  Null = return ()
 drawSingleChar colors y x ch s = moveCursor y x >> setStyle colors s >> drawText (pack [ch])	
 
 deepzip f back mask = [ f y x c s | (y,(bl,ml)) <- zip [0..] (zip back mask)
