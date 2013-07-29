@@ -1,3 +1,5 @@
+{-#LANGUAGE NoMonomorphismRestriction #-}
+
 import Control.Applicative
 import Control.Concurrent (threadDelay)
 import Control.Monad
@@ -17,19 +19,27 @@ message = "+*=-.;THEGAME"
 
 delay = 50000
 
-on = (2, 8)
-off = (10, 20)
+on = (1, 7)
+off = (9, 19)
 
 -- end config
 
-data Cell = Empty | Normal | Bright
+data Cell = Empty | Normal | Bright | Null
 	deriving Show
 
-column :: MonadRandom m => m [Cell]
-column = do
+splitr x = getSplit >>= return . evalRand x
+
+-- Permet de faire tourner en parallèle des structures
+-- de données aléatoires et infinies
+prseq = mapM splitr
+
+column :: (MonadRandom m, Functor m) => m [Cell]
+column = fmap concat . sequence . repeat $ do
 	e <- getRandomR off
 	n <- getRandomR on
-	return (replicate e Empty ++ [Bright] ++ replicate n Normal)
+	return ([Empty] ++ replicate e Null
+                        ++ [Bright, Normal]
+                        ++ replicate n Null)
 
 
 slice n = map (take n) . takeWhile (not.null) . iterate (drop n)
