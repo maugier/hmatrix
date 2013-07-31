@@ -62,9 +62,8 @@ createColors = sequence [ newColorID ColorBlack ColorBlack 1
 setColorBold c b = setColor c >> setAttribute AttributeBold b
 
 main = runCurses $ do
-    (height', width') <- screenSize
-    let width = width' - 2 -- work around UI.Ncurses bug
-    let height = height' - 2
+    (height, width') <- screenSize
+    let width = width' - 1 -- work around UI.Ncurses bug
 
     [black, green] <- createColors
     win    <- defaultWindow
@@ -82,8 +81,8 @@ main = runCurses $ do
         setStyle s
         drawText (pack [ch])
 
-    let redrawMatrix back mask = forM_ (zip3 (reverse [0..height]) back mask) (\(y,bl,ml) -> 
-                                     forM_ (zip3 [0..width] bl ml) (\(x,b,m) -> 
+    let redrawMatrix back mask = forM_ (zip3 (reverse [0..height-1]) back mask) (\(y,bl,ml) -> 
+                                     forM_ (zip3 [0..width-1] bl ml) (\(x,b,m) -> 
                                          drawSingleChar y x b m))
 
     let displayFrame mask = do  
