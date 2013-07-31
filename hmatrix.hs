@@ -35,6 +35,8 @@ splitr x = getSplit >>= return . evalRand x
 
 prseq = mapM splitr
 
+liftrand = liftIO . evalRandIO
+
 -- Génère une colonne de cellules Matrix-style, avec
 -- une quantité aléatoire de blancs, une cellule claire,
 -- et une quantité aléatoire de cellules foncées
@@ -73,11 +75,11 @@ redrawMatrix colors = (sequence_.) . deepzip (drawSingleChar colors)
 
 nextFrame = map tail
 
-displayFrame colors back mask = do
-    redrawMatrix colors back mask
+displayFrame win colors back mask = do
+    updateWindow win $ redrawMatrix colors back mask
     render
     liftIO $ threadDelay delay
-    displayFrame colors back (nextFrame mask)
+    displayFrame win colors back (nextFrame mask)
 
 main = runCurses $ do
     (y, x') <- screenSize
@@ -85,5 +87,5 @@ main = runCurses $ do
     colors <- createColors
     win    <- defaultWindow
     let back = backdrop y x message
-    mask <- prseq $ replicate x column
-    displayFrame colors back (transpose mask)
+    mask <- liftrand . prseq $ replicate (fi x) column
+    displayFrame win colors back (transpose mask)
