@@ -25,7 +25,7 @@ off = (9, 19)
 -- end config
 
 data Cell = Empty | Normal | Bright | Null
-    deriving Show
+    deriving (Show, Eq)
 
 -- Evalue une structure de données aléatoire en
 -- splittant l'état du RNG - ceci permet de générer
@@ -59,33 +59,37 @@ backdrop y x = take (fi y) . slice (fi x) . cycle
 createColors = sequence [ newColorID ColorBlack ColorBlack 1 
                         , newColorID ColorGreen ColorBlack 2 ]
 
-
-setStyle [black,_] Empty  = setColor black >> setAttribute AttributeBold False
-setStyle [_,green] Normal = setColor green >> setAttribute AttributeBold False
-setStyle [_,green] Bright = setColor green >> setAttribute AttributeBold True
-setStyle _         _      = return ()
-
-drawSingleChar _      _ _ _  Null = return ()
-drawSingleChar colors y x ch s = moveCursor y x >> setStyle colors s >> drawText (pack [ch])    
-
-deepzip f back mask = [ f y x c s | (y,(bl,ml)) <- zip [0..] (zip back mask)
-                                , (x,(c,s)) <- zip [0..] (zip bl ml)]
-
-redrawMatrix colors = (sequence_.) . deepzip (drawSingleChar colors)
-
-nextFrame = map tail
-
-displayFrame win colors back mask = do
-    updateWindow win $ redrawMatrix colors back mask
-    render
-    liftIO $ threadDelay delay
-    displayFrame win colors back (nextFrame mask)
+setColorBold c b = setColor c >> setAttribute AttributeBold b
 
 main = runCurses $ do
-    (y, x') <- screenSize
-    let x = x' - 1 -- work around UI.Ncurses bug
-    colors <- createColors
+    (height', width') <- screenSize
+    let width = width' - 2 -- work around UI.Ncurses bug
+    let height = height' - 2
+
+    [black, green] <- createColors
     win    <- defaultWindow
-    let back = backdrop y x message
-    mask <- liftrand . prseq $ replicate (fi x) column
-    displayFrame win colors back (transpose mask)
+    let back = backdrop height width message
+    mask <- liftrand . prseq $ replicate (fi width) column
+
+    let setStyle = \s -> case s of
+                             Empty  -> setColorBold black False
+                             Normal -> setColorBold green False
+                             Bright -> setColorBold green True
+                             _      -> return ()
+
+    let drawSingleChar y x ch s = when (s /= Null) $ do
+        moveCursor y x
+        setStyle s
+        drawText (pack [ch])
+
+    let redrawMatrix back mask = forM_ (zip3 (reverse [0..height]) back mask) (\(y,bl,ml) -> 
+                                     forM_ (zip3 [0..width] bl ml) (\(x,b,m) -> 
+                                         drawSingleChar y x b m))
+
+    let displayFrame mask = do  
+        updateWindow win $ redrawMatrix back mask
+        render
+        liftIO $ threadDelay delay
+
+    mapM_ displayFrame (iterate tail (transpose mask)) where
+
