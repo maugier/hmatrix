@@ -8,7 +8,7 @@ import Control.Monad.State
 import Data.Array.IO
 import Data.Char
 import Data.IORef
-import Data.List (transpose)
+import Data.List (transpose, tails)
 import Data.Text (pack)
 import UI.NCurses
 import System.Random
@@ -54,7 +54,7 @@ slice n =  map (take n) . takeWhile (not.null) . iterate (drop n)
 fi = fromInteger
 
 -- Crée le fond en répétant le message horizontalement, on le transpose
-backdrop y x = take (fi y) . slice (fi x) . cycle
+backdrop y x = reverse . take (fi y) . map (take (fi x)) . tails . cycle
 
 createColors = sequence [ newColorID ColorBlack ColorBlack 1 
                         , newColorID ColorGreen ColorBlack 2 ]
