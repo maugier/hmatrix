@@ -15,9 +15,9 @@ import System.Random
 
 -- config
 
-message = "+*=-.;THEGAME"
+message = "YOU LOST THE GAME  "
 
-delay = 50000
+delay = 80000
 
 on = (1, 7)
 off = (9, 19)
@@ -76,19 +76,21 @@ main = runCurses $ do
                              Bright -> setColorBold green True
                              _      -> return ()
 
-    let drawSingleChar y x ch s = when (s /= Null) $ do
-        moveCursor y x
-        setStyle s
-        drawText (pack [ch])
+    let drawSingleChar y x ch s =
+          when (s /= Null) $ 
+            do
+                moveCursor y x
+                setStyle s
+                drawText (pack [ch])
 
     let redrawMatrix back mask = forM_ (zip3 (reverse [0..height-1]) back mask) (\(y,bl,ml) -> 
                                      forM_ (zip3 [0..width-1] bl ml) (\(x,b,m) -> 
                                          drawSingleChar y x b m))
 
     let displayFrame mask = do  
-        updateWindow win $ redrawMatrix back mask
-        render
-        liftIO $ threadDelay delay
+         updateWindow win $ redrawMatrix back mask
+         render
+         liftIO $ threadDelay delay
 
     mapM_ displayFrame (iterate tail (transpose mask)) where
 
